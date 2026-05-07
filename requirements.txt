@@ -1,0 +1,14 @@
+# Manipulación de datos
+pandas
+numpy
+
+# Visualización
+matplotlib
+seaborn
+
+# Machine Learning y Preprocesamiento
+scikit-learn
+joblib
+
+# Opcional: para notebooks
+ipykernel
