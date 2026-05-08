@@ -1,8 +1,8 @@
 """
-Módulo de Preprocesamiento de Datos
+Módulo de Preprocesamiento de Datos (Versión Multiclase)
 -----------------------------------
-Este script contiene las funciones necesarias para cargar, limpiar 
-y preparar el dataset de Wine Quality para el modelado.
+Este script contiene las funciones para cargar y preparar el dataset
+de Wine Quality White en 3 categorías: Bajo, Medio y Alto.
 """
 
 import pandas as pd
@@ -10,57 +10,44 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 def load_data(path):
-    """
-    Carga el dataset desde un archivo CSV.
-    
-    Argumentos:
-        path (str): Ruta relativa o absoluta del archivo .csv
-    Retorna:
-        pd.DataFrame: Datos cargados.
-    """
-    # Se especifica ";" como separador según la naturaleza del dataset original
+    """Carga el dataset especificando ';' como separador."""
     return pd.read_csv(path, sep=';')
 
-def binarize_quality(df, target_col='quality', threshold=6):
+def categorize_quality(df, target_col='quality'):
     """
-    Convierte la variable objetivo 'quality' en categorías binarias.
+    Convierte la calidad (3-9) en 3 categorías discretas:
+    0: Bajo (calidad <= 5)
+    1: Medio (calidad == 6)
+    2: Alto (calidad >= 7)
     
     Argumentos:
         df (pd.DataFrame): Dataset original.
-        target_col (str): Nombre de la columna objetivo.
-        threshold (int): Valor de corte para definir alta calidad.
-        
     Retorna:
-        pd.DataFrame: Una copia del dataset con la columna objetivo binarizada.
+        pd.DataFrame: Copia del dataset con la columna objetivo categorizada.
     """
-    # OPERACIÓN SEGURA: Creamos una copia para no alterar el DataFrame original en memoria
+    # OPERACIÓN SEGURA: Creamos una copia para proteger los datos originales
     df_copy = df.copy()
     
-    # 0 para calidad < 6 (3, 4, 5) y 1 para >= 6 (6, 7, 8, 9)
-    # Esto ayuda a balancear mejor el problema ante el solapamiento detectado en el PCA.
-    df_copy[target_col] = (df_copy[target_col] >= threshold).astype(int)
-    
+    def aplicar_reglas(val):
+        if val <= 5:
+            return 0  # Bajo (Vinos más básicos)
+        elif val == 6:
+            return 1  # Medio (Vino estándar/bueno)
+        else:
+            return 2  # Alto (Vinos premium/excelentes)
+            
+    df_copy[target_col] = df_copy[target_col].apply(aplicar_reglas)
     return df_copy
 
 def prepare_data(df, target_col='quality', test_size=0.2, random_state=42):
     """
-    Realiza la partición de datos (Train/Test) y la estandarización de características.
-    
-    Argumentos:
-        df (pd.DataFrame): Dataset ya binarizado o procesado.
-        target_col (str): Nombre de la columna objetivo.
-        test_size (float): Proporción de datos para el set de prueba.
-        random_state (int): Semilla para asegurar reproducibilidad.
-        
-    Retorna:
-        X_train, X_test, y_train, y_test (arrays): Datos listos para el modelo.
-        scaler (StandardScaler): El objeto escalador entrenado para uso futuro.
+    Realiza el split y la estandarización de los datos.
     """
-    # Separación de características (X) y etiqueta (y)
     X = df.drop(target_col, axis=1)
     y = df[target_col]
     
-    # Split con estratificación para mantener la proporción de clases (Indicador 2.2.1)
+    # Es VITAL usar stratify=y en problemas multiclase para que los 3 grupos
+    # estén representados proporcionalmente en train y test.
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, 
         test_size=test_size, 
@@ -68,10 +55,8 @@ def prepare_data(df, target_col='quality', test_size=0.2, random_state=42):
         stratify=y
     )
     
-    # Estandarización: Crucial para modelos sensibles a la escala como SVM o KNN
     scaler = StandardScaler()
-    
-    # Entrenamos el escalador solo con X_train para evitar "Data Leakage"
+    # Fit solo en entrenamiento para evitar Data Leakage
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
     
