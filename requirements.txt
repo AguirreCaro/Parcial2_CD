@@ -12,3 +12,5 @@ joblib
 
 # Opcional: para notebooks
 ipykernel
+
+#pip install -r requirements.txt
